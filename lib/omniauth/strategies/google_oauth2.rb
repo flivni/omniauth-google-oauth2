@@ -62,14 +62,14 @@ module OmniAuth
         if !options[:skip_jwt] && !access_token['id_token'].nil?
           # FDL: I added a check for both possible iss domains. This is fixed in version 0.6.0 of this gem. See
           # google doc notes for more info on updating the gem.
-          hash[:id_info] = do_jwt_decode(options, access_token, 'https://accounts.google.com') ||
+          hash[:id_info] = do_jwt_decode(options, access_token, 'https://accounts.google.com', return_false_rather_than_raise: true) ||
               do_jwt_decode(options, access_token, 'accounts.google.com')
         end
         hash[:raw_info] = raw_info unless skip_info?
         prune! hash
       end
 
-      def do_jwt_decode(options, access_token, iss)
+      def do_jwt_decode(options, access_token, iss, return_false_rather_than_raise: false)
         begin
           ::JWT.decode(
               access_token['id_token'], nil, false, verify_iss: options.verify_iss,
@@ -84,7 +84,7 @@ module OmniAuth
               leeway: options[:jwt_leeway]
           ).first
         rescue Exception => ex
-          raise unless ex.message.starts_with? 'Invalid issuer.'
+          raise if !return_false_rather_than_raise || !ex.message.starts_with?('Invalid issuer.')
           return false
         end
       end
